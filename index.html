@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1f6f5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chores">
+<title>Home Chores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: one column per person on the board, a manage table and an activity feed behind tabs. */
+  --bg: #f3f6f5;
+  --surface: #ffffff;
+  --ink: #15302a;
+  --muted: #5d716c;
+  --line: #dce5e2;
+  --accent: #1f6f5c;
+  --accent-soft: #e2f0ec;
+  --mila: #d6496e;
+  --adam: #2f72cf;
+  --agata: #c98a06;
+  --done: #2e8a5a;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1715; --surface: #17221f; --ink: #e4eeeb; --muted: #93a8a2; --line: #26352f;
+    --accent: #5cc4a6; --accent-soft: #1d3a32; --mila: #f07b9a; --adam: #6ea6f2; --agata: #e8b23f; --done: #5dc98e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1715; --surface: #17221f; --ink: #e4eeeb; --muted: #93a8a2; --line: #26352f;
+  --accent: #5cc4a6; --accent-soft: #1d3a32; --mila: #f07b9a; --adam: #6ea6f2; --agata: #e8b23f; --done: #5dc98e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; }
+h1 { font: 800 30px/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.date { color: var(--muted); font-weight: 500; margin-top: 2px; }
+.me { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.me span { color: var(--muted); font-size: 13px; }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-weight: 600; font-size: 14px; }
+.chip[aria-pressed="true"] { border-color: var(--pc); background: var(--pc); color: #fff; }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--pc); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.tile .name { font: 700 17px/1.2 var(--display); }
+.bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--pc); border-radius: 99px; transition: width .3s; }
+.tile .stats { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tile .stats b { color: var(--ink); }
+nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+nav button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 8px 12px; font-weight: 600; color: var(--muted); }
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 14px; align-items: start; }
+.col { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.col > h2 { margin: 0; padding: 12px 14px; font: 700 19px/1.2 var(--display); border-top: 5px solid var(--pc); display: flex; justify-content: space-between; align-items: baseline; }
+.col > h2 small { font: 500 13px var(--body); color: var(--muted); }
+.group { padding: 4px 14px 12px; }
+.group h3 { margin: 8px 0 4px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.task { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.group h3 + .task { border-top: 0; }
+.check { width: 28px; height: 28px; border-radius: 8px; border: 2px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; }
+.check svg { width: 16px; height: 16px; opacity: 0; }
+.check .n { font-size: 11px; font-weight: 700; color: var(--muted); }
+.task.part .check { border-color: var(--done); }
+.task.part .check .n { color: var(--done); }
+.did { border: 1.5px solid var(--line); background: var(--surface); border-radius: 8px; padding: 3px 9px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.did:hover { border-color: var(--accent); color: var(--accent); }
+.undo { background: none; border: 0; padding: 0; color: var(--accent); font-size: 12.5px; text-decoration: underline; }
+.with { font-size: 11.5px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+.who { display: flex; gap: 4px; flex-wrap: wrap; }
+.who label { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; border: 1.5px solid var(--line); border-radius: 99px; padding: 2px 9px 2px 6px; cursor: pointer; }
+.who label:has(input:checked) { border-color: var(--pc); color: var(--pc); }
+.room-h td { background: var(--accent-soft); font: 700 14px var(--display); letter-spacing: .02em; }
+.task.done .check { background: var(--done); border-color: var(--done); }
+.task.done .check svg { opacity: 1; }
+.task .t { font-weight: 600; }
+.task.done .t { text-decoration: line-through; color: var(--muted); }
+.task .sub { font-size: 12.5px; color: var(--muted); }
+.freq { font-size: 12px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 2px 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.empty { color: var(--muted); font-size: 13px; padding: 6px 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 14px; }
+.panel h2 { margin: 0; font: 700 19px/1.2 var(--display); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.btn { border: 1.5px solid var(--accent); background: var(--accent); color: var(--surface); border-radius: 8px; padding: 7px 14px; font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.danger { border-color: #c2413a; background: transparent; color: #c2413a; padding: 4px 10px; font-size: 13px; }
+.btn.danger.armed { background: #c2413a; color: #fff; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 640px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+td select, td input[type="number"], form select, form input { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; }
+td input[type="number"] { width: 58px; }
+form.add { display: grid; grid-template-columns: 2fr 1.2fr 1.1fr 1.6fr auto; gap: 8px; align-items: end; }
+form.add label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.feed { display: grid; gap: 0; }
+.feed div { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.feed time { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--pc); margin-right: 6px; }
+.status { font-size: 12.5px; color: var(--muted); }
+.note { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; font-size: 13.5px; }
+.lead { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.lead div { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.lead b { font: 800 26px/1 var(--display); display: block; font-variant-numeric: tabular-nums; }
+.lead span { font-size: 13px; color: var(--muted); }
+@media (max-width: 720px) { form.add { grid-template-columns: 1fr 1fr; } form.add .wide { grid-column: 1 / -1; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+p { margin: 0; max-width: 65ch; }
+a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="panel"><h2>Loading chores…</h2></div></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ===== 1. PASTE YOUR FIREBASE CONFIG HERE (Firebase console → Project settings → Your apps) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyBEpPIWq9rcdS4gR8ebuE3q6asHQLFjMXM",
+  authDomain: "home-game-44813.firebaseapp.com",
+  projectId: "home-game-44813",
+  storageBucket: "home-game-44813.firebasestorage.app",
+  messagingSenderId: "1037760268896",
+  appId: "1:1037760268896:web:788969da519f5695e01105",
+  measurementId: "G-N86J6P1LCE"
+};
+// ================================================================================================
+
+const SEED = {"people":[{"id":"adam","name":"Adam","color":"--adam"},{"id":"mila","name":"Mila","color":"--mila"},{"id":"agata","name":"Agata","color":"--agata"}],"rooms":["Kitchen","Bathroom","Mila's bathroom","Other"],"chores":[{"id":"k1","name":"Washing dishes","room":"Kitchen","freq":"daily","who":["adam","mila"]},{"id":"k2","name":"Counters and table","room":"Kitchen","freq":"daily","who":["mila"]},{"id":"k3","name":"Emptying the dishwasher","room":"Kitchen","freq":"asneeded","who":["mila"]},{"id":"k4","name":"Garbage","room":"Kitchen","freq":"asneeded","who":["adam","mila"]},{"id":"k5","name":"Stove","room":"Kitchen","freq":"weekly","who":["mila"]},{"id":"k6","name":"Cupboards","room":"Kitchen","freq":"weekly","who":["agata"]},{"id":"k7","name":"Fridge","room":"Kitchen","freq":"monthly","who":["agata"]},{"id":"b1","name":"Sink and mirror","room":"Bathroom","freq":"2xweek","who":["agata"]},{"id":"b2","name":"Shower","room":"Bathroom","freq":"monthly","who":["adam"]},{"id":"b3","name":"Toilet","room":"Bathroom","freq":"2xmonth","who":["adam"]},{"id":"b4","name":"Garbage","room":"Bathroom","freq":"asneeded","who":["adam"]},{"id":"m1","name":"Bathtub","room":"Mila's bathroom","freq":"2xmonth","who":["mila"]},{"id":"m2","name":"Sink and mirror","room":"Mila's bathroom","freq":"2xweek","who":["agata"]},{"id":"m3","name":"Toilet","room":"Mila's bathroom","freq":"2xmonth","who":["mila"]},{"id":"m4","name":"Garbage","room":"Mila's bathroom","freq":"asneeded","who":["mila"]},{"id":"o1","name":"Laundry","room":"Other","freq":"weekly","who":["agata"]},{"id":"o2","name":"Bedding and towels","room":"Other","freq":"2xmonth","who":["agata"]},{"id":"o3","name":"Vacuuming","room":"Other","freq":"2xweek","who":["adam"]},{"id":"o4","name":"Floors","room":"Other","freq":"monthly","who":["adam"]},{"id":"o5","name":"Dusting and mirrors","room":"Other","freq":"2xmonth","who":["agata"]},{"id":"o6","name":"Sofa","room":"Other","freq":"weekly","who":["agata"]},{"id":"o7","name":"Watering plants","room":"Other","freq":"2xweek","who":["adam","agata"]},{"id":"o8","name":"Mila's room","room":"Other","freq":"asneeded","who":["mila"]},{"id":"o9","name":"Closets","room":"Other","freq":"asneeded","who":["agata"]}],"done":{},"log":[],"nextId":1};
+
+const F = {
+  daily:    { label: 'Every day',     group: 'Today',       per: 'day',   n: 1 },
+  '2xweek': { label: 'Twice a week',  group: 'This week',   per: 'week',  n: 2 },
+  weekly:   { label: 'Once a week',   group: 'This week',   per: 'week',  n: 1 },
+  '2xmonth':{ label: 'Twice a month', group: 'This month',  per: 'month', n: 2 },
+  monthly:  { label: 'Once a month',  group: 'This month',  per: 'month', n: 1 },
+  asneeded: { label: 'When needed',   group: 'When needed', per: null,    n: 0 }
+};
+const GROUPS = ['Today', 'This week', 'This month', 'When needed'];
+const CHECK = '<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+
+const root = document.getElementById('root');
+let state = null, tab = 'board', armedDelete = null, statusText = 'Connecting…';
+let me = null;
+try { me = localStorage.getItem('chores-me'); } catch (e) {}
+
+// ---------- helpers ----------
+const pad = n => String(n).padStart(2, '0');
+const dayKey = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+function mondayOf(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function periodKey(per, d) {
+  if (per === 'day') return dayKey(d);
+  if (per === 'week') return 'W' + dayKey(mondayOf(d));
+  if (per === 'month') return d.getFullYear() + '-' + pad(d.getMonth() + 1);
+  return null;
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const person = (s, id) => s.people.find(p => p.id === id) || null;
+const pc = id => { const p = person(state, id); return p ? 'var(' + p.color + ')' : 'var(--muted)'; };
+const curPeriod = c => periodKey(F[c.freq].per, new Date());
+const target = c => F[c.freq].n;
+function count(s, c) { const d = s.done[c.id], p = curPeriod(c); return (p && d && d.period === p) ? d.count : 0; }
+function fmtTime(iso) {
+  const d = new Date(iso), now = new Date();
+  const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (dayKey(d) === dayKey(now)) return 'today ' + t;
+  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + t;
+}
+const doneSince = (pid, since) => state.log.filter(l => l.by === pid && new Date(l.at) >= since).length;
+const roomIdx = r => { const i = state.rooms.indexOf(r); return i < 0 ? 99 : i; };
+function setStatus(t) { statusText = t; const el = document.getElementById('status'); if (el) el.textContent = t; }
+
+// ---------- household link ----------
+const params = new URLSearchParams(location.search);
+let homeId = params.get('home');
+if (!homeId) { try { homeId = localStorage.getItem('chores-home'); } catch (e) {} if (homeId) history.replaceState(null, '', '?home=' + homeId); }
+function newId() { const a = new Uint8Array(18); crypto.getRandomValues(a); return Array.from(a, b => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join(''); }
+
+if (firebaseConfig.apiKey.startsWith('PASTE')) {
+  root.innerHTML = '<header><div><h1>Home Chores</h1></div></header><div class="panel"><h2>One step left</h2><p>Paste your Firebase config into <b>index.html</b> (look for “PASTE YOUR FIREBASE CONFIG HERE”), then reload this page.</p></div>';
+  throw new Error('Firebase config missing');
+}
+const db = getFirestore(initializeApp(firebaseConfig));
+
+if (!homeId) {
+  root.innerHTML = '<header><div><h1>Home Chores</h1><div class="date">Set up your household</div></div></header>' +
+    '<div class="panel"><h2>Start your chore board</h2><p>This creates your household’s board with the family chore list. You’ll get a private link to share with Mila and Agata.</p>' +
+    '<div><button class="btn" id="create">Create our board</button></div><div class="status" id="status"></div></div>';
+  document.getElementById('create').onclick = async () => {
+    const id = newId();
+    setStatus('Creating…');
+    try {
+      await setDoc(doc(db, 'households', id), SEED);
+      try { localStorage.setItem('chores-home', id); } catch (e) {}
+      location.search = '?home=' + id;
+    } catch (e) { setStatus('Could not create the board: ' + e.message + '. Check the Firestore rules step in the setup guide.'); }
+  };
+} else {
+  try { localStorage.setItem('chores-home', homeId); } catch (e) {}
+  const ref = doc(db, 'households', homeId);
+  onSnapshot(ref, snap => {
+    if (!snap.exists()) {
+      root.innerHTML = '<div class="panel"><h2>Board not found</h2><p>This link doesn’t match a household. Check you copied the whole link.</p><p><a href="?" id="reset">Start a new board instead</a></p></div>';
+      document.getElementById('reset').onclick = () => { try { localStorage.removeItem('chores-home'); } catch (e) {} };
+      return;
+    }
+    state = snap.data();
+    if (!snap.metadata.hasPendingWrites) setStatus('Synced');
+    render();
+  }, err => setStatus('Connection problem: ' + err.message));
+
+  // Apply a change locally right away, then safely on the server (merges with other people's changes).
+  window.__mutate = async function (fn) {
+    fn(state); render();
+    setStatus('Saving…');
+    try {
+      await runTransaction(db, async tx => {
+        const snap = await tx.get(ref);
+        const s = snap.data();
+        fn(s);
+        if (s.log.length > 400) s.log = s.log.slice(-400);
+        tx.set(ref, s);
+      });
+      setStatus('Synced');
+    } catch (e) { setStatus('Not saved (are you offline?). Try again.'); }
+  };
+}
+const mutate = fn => window.__mutate(fn);
+
+// ---------- actions (pure functions on a state object) ----------
+function doComplete(s, cid, by, at) {
+  const c = s.chores.find(x => x.id === cid); if (!c) return;
+  const p = curPeriod(c), k = count(s, c);
+  if (p && k >= target(c)) return;
+  s.done[c.id] = { period: p, count: p ? k + 1 : 0, by, at };
+  s.log.push({ choreId: c.id, name: c.name, room: c.room, by, period: p, at });
+}
+function doUndo(s, cid) {
+  const c = s.chores.find(x => x.id === cid); if (!c) return;
+  const p = curPeriod(c);
+  for (let i = s.log.length - 1; i >= 0; i--) if (s.log[i].choreId === c.id && s.log[i].period === p) { s.log.splice(i, 1); break; }
+  let prev = null;
+  for (let j = s.log.length - 1; j >= 0; j--) if (s.log[j].choreId === c.id && s.log[j].period === p) { prev = s.log[j]; break; }
+  if (p) {
+    const n = count(s, c) - 1;
+    if (n <= 0 || !prev) delete s.done[c.id]; else s.done[c.id] = { period: p, count: n, by: prev.by, at: prev.at };
+  } else {
+    if (prev) s.done[c.id] = { period: null, count: 0, by: prev.by, at: prev.at }; else delete s.done[c.id];
+  }
+}
+
+// ---------- rendering ----------
+function progress(pid) {
+  let t = 0, k = 0;
+  state.chores.forEach(c => { if (c.who.includes(pid) && c.freq !== 'asneeded') { t += target(c); k += Math.min(count(state, c), target(c)); } });
+  return { t, k };
+}
+function taskRow(c, viewer) {
+  const d = state.done[c.id], n = target(c), k = count(state, c);
+  const others = c.who.filter(w => w !== viewer).map(w => (person(state, w) || {}).name || '');
+  const title = '<div class="t">' + esc(c.name) + (others.length ? '<span class="with">with ' + esc(others.join(', ')) + '</span>' : '') + '</div>';
+  const sub = esc(c.room) + ' · ' + F[c.freq].label;
+  let last = '';
+  if (d) { const p = person(state, d.by); last = (c.freq === 'asneeded' ? 'Last done' : 'Done') + (p ? ' by ' + esc(p.name) : '') + ', ' + fmtTime(d.at); }
+  if (c.freq === 'asneeded') {
+    const undoBtn = (d && dayKey(new Date(d.at)) === dayKey(new Date())) ? ' · <button class="undo" data-action="undo" data-id="' + c.id + '">Undo</button>' : '';
+    return '<div class="task"><span></span><div>' + title + '<div class="sub">' + (last ? last + undoBtn : sub) + '</div></div><button class="did" data-action="done" data-id="' + c.id + '">Did it</button></div>';
+  }
+  const full = k >= n, part = k > 0 && !full;
+  const inner = full ? CHECK : (n > 1 ? '<span class="n">' + k + '/' + n + '</span>' : CHECK);
+  const extra = part ? ' · <button class="undo" data-action="undo" data-id="' + c.id + '">Undo</button>' : '';
+  const subLine = k ? last + (n > 1 ? ' (' + k + ' of ' + n + ')' : '') + extra : sub;
+  return '<div class="task' + (full ? ' done' : '') + (part ? ' part' : '') + '"><button class="check" data-action="' + (full ? 'undo' : 'done') + '" data-id="' + c.id + '" aria-label="' + esc((full ? 'Undo: ' : 'Mark done: ') + c.name) + '">' + inner + '</button><div>' + title + '<div class="sub">' + subLine + '</div></div><span></span></div>';
+}
+function renderBoard() {
+  return '<div class="board">' + state.people.map(p => {
+    const mine = state.chores.filter(c => c.who.includes(p.id));
+    const pr = progress(p.id), left = pr.t - pr.k;
+    const groups = GROUPS.map(g => {
+      const list = mine.filter(c => F[c.freq].group === g).sort((a, b) => roomIdx(a.room) - roomIdx(b.room));
+      return list.length ? '<h3>' + g + '</h3>' + list.map(c => taskRow(c, p.id)).join('') : '';
+    }).join('');
+    return '<section class="col" style="--pc:' + pc(p.id) + '"><h2>' + esc(p.name) + '<small>' + (left ? left + ' left' : 'All caught up') + '</small></h2><div class="group">' + (groups || '<div class="empty">No chores assigned.</div>') + '</div></section>';
+  }).join('') + '</div>';
+}
+const freqOptions = sel => Object.keys(F).map(f => '<option value="' + f + '"' + (f === sel ? ' selected' : '') + '>' + F[f].label + '</option>').join('');
+const roomOptions = sel => state.rooms.map(r => '<option' + (r === sel ? ' selected' : '') + '>' + esc(r) + '</option>').join('');
+function whoBoxes(prefix, sel, cid) {
+  return '<div class="who">' + state.people.map(p => {
+    const id = prefix + '-' + p.id;
+    return '<label for="' + id + '" style="--pc:' + pc(p.id) + '"><input type="checkbox" id="' + id + '" value="' + p.id + '"' + (sel.includes(p.id) ? ' checked' : '') + (cid ? ' data-field="who" data-id="' + cid + '"' : '') + '>' + esc(p.name) + '</label>';
+  }).join('') + '</div>';
+}
+function renderManage() {
+  const rows = state.rooms.map(r => {
+    const list = state.chores.filter(c => c.room === r);
+    if (!list.length) return '';
+    return '<tr class="room-h"><td colspan="4">' + esc(r) + '</td></tr>' + list.map(c =>
+      '<tr><td><b>' + esc(c.name) + '</b></td><td>' + whoBoxes('w-' + c.id, c.who, c.id) + '</td>' +
+      '<td><select id="fq-' + c.id + '" data-field="freq" data-id="' + c.id + '" aria-label="How often: ' + esc(c.name) + '">' + freqOptions(c.freq) + '</select></td>' +
+      '<td><button class="btn danger' + (armedDelete === c.id ? ' armed' : '') + '" data-action="delete" data-id="' + c.id + '">' + (armedDelete === c.id ? 'Confirm delete' : 'Delete') + '</button></td></tr>').join('');
+  }).join('');
+  return '<div class="panel"><h2>All chores</h2><div class="note">Tick more than one name to share a chore. Either person can mark it done.</div>' +
+    '<div class="table-wrap"><table><thead><tr><th>What</th><th>Who</th><th>How often</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<h2>Add a chore</h2><form class="add" id="add-form">' +
+    '<label class="wide" for="new-name">What<input id="new-name" required maxlength="60" placeholder="e.g. Windows"></label>' +
+    '<label for="new-room">Room<select id="new-room">' + roomOptions('Other') + '</select></label>' +
+    '<label for="new-freq">How often<select id="new-freq">' + freqOptions('weekly') + '</select></label>' +
+    '<div><div class="status" style="font-weight:600;margin-bottom:3px">Who</div>' + whoBoxes('new-who', me ? [me] : [], null) + '</div>' +
+    '<button class="btn" type="submit">Add chore</button></form><div class="status" id="add-msg"></div></div>';
+}
+function renderActivity() {
+  const now = new Date(), week = mondayOf(now), month = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lead = state.people.map(p => '<div style="--pc:' + pc(p.id) + '"><span><i class="dot"></i>' + esc(p.name) + '</span><b>' + doneSince(p.id, week) + '</b><span>chores this week · ' + doneSince(p.id, month) + ' this month</span></div>').join('');
+  const feed = state.log.slice(-50).reverse().map(l => {
+    const p = person(state, l.by);
+    return '<div style="--pc:' + pc(l.by) + '"><span><i class="dot"></i><b>' + esc(p ? p.name : '?') + '</b> ' + esc(l.name) + ' <span class="status">(' + esc(l.room || '') + ')</span></span><time>' + fmtTime(l.at) + '</time></div>';
+  }).join('');
+  return '<div class="panel"><h2>Who did what</h2><div class="lead">' + lead + '</div><h2>Recent activity</h2><div class="feed">' + (feed || '<div><span class="empty">Nothing marked done yet. Finished chores show up here.</span></div>') + '</div></div>';
+}
+function render() {
+  if (!state) return;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+  const meChips = state.people.map(p => '<button class="chip" style="--pc:' + pc(p.id) + '" data-action="me" data-id="' + p.id + '" aria-pressed="' + (me === p.id) + '">' + esc(p.name) + '</button>').join('');
+  const tiles = state.people.map(p => {
+    const pr = progress(p.id), pct = pr.t ? Math.round(pr.k / pr.t * 100) : 0;
+    return '<div class="tile" style="--pc:' + pc(p.id) + '"><div class="name">' + esc(p.name) + '</div><div class="bar"><i style="width:' + pct + '%"></i></div><div class="stats"><span><b>' + pr.k + '</b> of ' + pr.t + ' done</span><span>this period</span></div></div>';
+  }).join('');
+  const tabs = [['board', 'Board'], ['manage', 'All chores'], ['activity', 'Activity']].map(t => '<button role="tab" id="tab-' + t[0] + '" aria-selected="' + (tab === t[0]) + '" data-action="tab" data-id="' + t[0] + '">' + t[1] + '</button>').join('');
+  const body = tab === 'board' ? renderBoard() : tab === 'manage' ? renderManage() : renderActivity();
+  const hint = me ? '' : '<div class="note">Tap your name so the chores you finish are credited to you.</div>';
+  root.innerHTML = '<header><div><h1>Home Chores</h1><div class="date">' + dateStr + '</div></div><div class="me"><span>I am:</span>' + meChips + '</div></header>' + hint +
+    '<div class="summary">' + tiles + '</div><nav role="tablist">' + tabs + '</nav>' + body +
+    '<div class="row-actions"><div class="status" id="status">' + esc(statusText) + '</div><button class="btn ghost" data-action="share">Copy link to share</button></div>';
+}
+
+// ---------- events ----------
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-action]');
+  if (!b || !state) return;
+  const a = b.dataset.action, id = b.dataset.id;
+  if (a !== 'delete') armedDelete = null;
+  if (a === 'done') {
+    const c = state.chores.find(x => x.id === id); if (!c) return;
+    const by = (me && person(state, me)) ? me : c.who[0], at = new Date().toISOString();
+    mutate(s => doComplete(s, id, by, at));
+  } else if (a === 'undo') mutate(s => doUndo(s, id));
+  else if (a === 'tab') { tab = id; render(); }
+  else if (a === 'me') { me = me === id ? null : id; try { me ? localStorage.setItem('chores-me', me) : localStorage.removeItem('chores-me'); } catch (x) {} render(); }
+  else if (a === 'share') {
+    navigator.clipboard.writeText(location.href).then(() => setStatus('Link copied. Send it to Mila and Agata.'), () => setStatus('Copy this link: ' + location.href));
+  } else if (a === 'delete') {
+    if (armedDelete === id) { armedDelete = null; mutate(s => { s.chores = s.chores.filter(c => c.id !== id); delete s.done[id]; }); }
+    else { armedDelete = id; render(); }
+  }
+});
+document.addEventListener('change', e => {
+  const el = e.target, f = el.dataset && el.dataset.field;
+  if (!f || !state) return;
+  const id = el.dataset.id;
+  const c = state.chores.find(x => x.id === id); if (!c) return;
+  if (f === 'who') {
+    const v = el.value, on = el.checked;
+    if (!on && c.who.length === 1) { el.checked = true; return; }
+    const order = state.people.map(p => p.id);
+    mutate(s => {
+      const cc = s.chores.find(x => x.id === id); if (!cc) return;
+      cc.who = on ? Array.from(new Set(cc.who.concat(v))) : cc.who.filter(w => w !== v);
+      if (!cc.who.length) cc.who = [v];
+      cc.who.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    });
+  } else if (f === 'freq') {
+    const v = el.value;
+    mutate(s => { const cc = s.chores.find(x => x.id === id); if (cc) { cc.freq = v; delete s.done[id]; } });
+  }
+});
+document.addEventListener('submit', e => {
+  if (e.target.id !== 'add-form' || !state) return;
+  e.preventDefault();
+  const name = document.getElementById('new-name').value.trim();
+  const who = state.people.map(p => p.id).filter(id => { const x = document.getElementById('new-who-' + id); return x && x.checked; });
+  const msg = document.getElementById('add-msg');
+  if (!name) return;
+  if (!who.length) { if (msg) msg.textContent = 'Pick at least one person for this chore.'; return; }
+  const chore = { id: 'n' + Date.now().toString(36), name, room: document.getElementById('new-room').value, freq: document.getElementById('new-freq').value, who };
+  mutate(s => { s.chores.push(chore); });
+});
+
+// Re-render at midnight-ish so daily chores reset without a reload.
+setInterval(render, 60000);
+</script>
+</body>
+</html>
